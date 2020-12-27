@@ -1,0 +1,5 @@
+stk
+stko
+MCHammer
+atools
+xTB (>= 6.3.1)

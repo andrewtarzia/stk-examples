@@ -1,0 +1,9 @@
+This script builds and optimizes (using MCHammer and XTBFF) an m2l4 Lantern cagefrom a rotaxane-based ligand (DOI: 10.1039/D0CC04780E).
+
+There are some custom functions inside building.py and in my atools repo.
+
+*_bb.mol structures are the only hand built molecules (Avogadro), which building.py will load in.
+
+IF full_ligand.mol exists (i.e. has been constructed and optimised once), then those steps will be skipped because the orientation optimisation of the initial ligand is the slowest (most naive) optimisation in this script (in function `direction`).
+
+The final XTBFF optimisation is not perfect, but its cheap and this system is quite large.
