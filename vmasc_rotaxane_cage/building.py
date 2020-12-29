@@ -145,8 +145,7 @@ def opter(mol, target_bond_length, name):
     subunits = mch_mol.get_subunits(
         bond_pair_ids=stk_long_bond_ids,
     )
-    for su in subunits:
-        mol.write(f'temp_{su}.mol', atom_ids=subunits[su])
+    
     # Just get final step.
     mch_result = optimizer.get_result(
         mol=mch_mol,
