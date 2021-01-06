@@ -145,7 +145,7 @@ def opter(mol, target_bond_length, name):
     subunits = mch_mol.get_subunits(
         bond_pair_ids=stk_long_bond_ids,
     )
-    
+
     # Just get final step.
     mch_result = optimizer.get_result(
         mol=mch_mol,
@@ -225,7 +225,7 @@ def main():
                 num_repeating_units=1
             )
         )
-
+        rotaxane.write('rotaxane_uo.mol')
         rotaxane = stko.UFF(ignore_inter_interactions=False).optimize(
             rotaxane
         )
@@ -239,7 +239,7 @@ def main():
                 num_repeating_units=1,
             )
         )
-
+        ligand.write('ligand_uo.mol')
         ligand = direction(ligand)
         ligand.write('ligand.mol')
 
@@ -260,7 +260,7 @@ def main():
                 num_repeating_units=1,
             )
         )
-
+        full_ligand.write('full_ligand_uo.mol')
         full_ligand = opter(
             full_ligand,
             target_bond_length=1.2,
@@ -309,7 +309,7 @@ def main():
             )
         )
     )
-
+    cage.write('cage_c_uo.mol')
     cage = opter(cage, target_bond_length=1.2, name='cg')
     cage.write('cage_c.mol')
     print(f'Time taken w/o xtb: {time.time()-start_time}s')
