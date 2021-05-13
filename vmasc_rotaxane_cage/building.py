@@ -1,7 +1,9 @@
+import numpy as np
+from rdkit.Chem import AllChem as rdkit
+from mendeleev import element
 import stk
 import time
 import stko
-import mchammer as mch
 from os.path import exists
 import sys
 
@@ -32,6 +34,90 @@ def update_from_rdkit_conf(stk_mol, rdk_mol, conf_id):
     return stk_mol.with_position_matrix(pos_mat)
 
 
+def get_center_of_mass(molecule, atom_ids=None):
+    """
+    Return the centre of mass.
+
+    Parameters
+    ----------
+    molecule : :class:`stk.Molecule`
+
+    atom_ids : :class:`iterable` of :class:`int`, optional
+        The ids of atoms which should be used to calculate the
+        center of mass. If ``None``, then all atoms will be used.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        The coordinates of the center of mass.
+
+    References
+    ----------
+    https://en.wikipedia.org/wiki/Center_of_mass
+
+    """
+
+    if atom_ids is None:
+        atom_ids = range(molecule.get_num_atoms())
+    elif not isinstance(atom_ids, (list, tuple)):
+        # Iterable gets used twice, once in get_atom_positions
+        # and once in zip.
+        atom_ids = list(atom_ids)
+
+    center = 0
+    total_mass = 0.
+    coords = molecule.get_atomic_positions(atom_ids)
+    atoms = molecule.get_atoms(atom_ids)
+    for atom, coord in zip(atoms, coords):
+        mass = element(atom.__class__.__name__).atomic_weight
+        total_mass += mass
+        center += mass*coord
+    return np.divide(center, total_mass)
+
+
+def unit_vector(vector):
+    """
+    Returns the unit vector of the vector.
+
+    https://stackoverflow.com/questions/2827393/
+    angles-between-two-n-dimensional-vectors-in-python/
+    13849249#13849249
+    """
+    return vector / np.linalg.norm(vector)
+
+
+def angle_between(v1, v2, normal=None):
+    """
+    Returns the angle in radians between vectors 'v1' and 'v2'::
+
+        >>> angle_between((1, 0, 0), (0, 1, 0))
+        1.5707963267948966
+        >>> angle_between((1, 0, 0), (1, 0, 0))
+        0.0
+        >>> angle_between((1, 0, 0), (-1, 0, 0))
+        3.141592653589793
+
+    https://stackoverflow.com/questions/2827393/
+    angles-between-two-n-dimensional-vectors-in-python/
+    13849249#13849249
+
+    If normal is given, the angle polarity is determined using the
+    cross product of the two vectors.
+
+    """
+
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    angle = np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
+    if normal is not None:
+        # Get normal vector and cross product to determine sign.
+        cross = np.cross(v1_u, v2_u)
+        if np.dot(normal, cross) < 0:
+            angle = -angle
+    return angle
+
+
 def calculate_N_COM_N_angle(bb):
     """
     Calculate the N-COM-N angle of a ditopic building block.
@@ -54,7 +140,7 @@ def calculate_N_COM_N_angle(bb):
     fg_counts = 0
     fg_positions = []
     for fg in bb.get_functional_groups():
-        if isinstance(fg, AromaticCNC) or isinstance(fg, AromaticCNN):
+        if isinstance(fg, AromaticCNC):
             fg_counts += 1
             # Get geometrical properties of the FG.
             # Get N position - deleter.
@@ -268,7 +354,7 @@ def direction(mol):
         N=40,
         ETKDG_version='v3'
     )
-    print(f'getting optimal conformer...')
+    print('getting optimal conformer...')
     min_angle = 10000
     min_cid = -10
     # Need to define the functional groups.
@@ -359,53 +445,6 @@ def merge_subunits_by_buildingblockid(mol, subunits):
         new_subunits[su] = compound_subunit
 
     return new_subunits
-
-
-def opter(mol, target_bond_length, name):
-    stk_long_bond_ids = get_long_bond_ids(mol)
-    bond_infos = []
-    for i, bond in enumerate(mol.get_bonds()):
-        ba1 = bond.get_atom1().get_id()
-        ba2 = bond.get_atom2().get_id()
-        if ba1 < ba2:
-            bond_infos.append((i, ba1, ba2))
-        else:
-            bond_infos.append((i, ba2, ba1))
-
-    mch_mol = mch.Molecule(
-        atoms=(
-            mch.Atom(
-                id=atom.get_id(),
-                element_string=atom.__class__.__name__,
-            ) for atom in mol.get_atoms()
-        ),
-        bonds=(
-            mch.Bond(id=i, atom1_id=j, atom2_id=k)
-            for i, j, k in bond_infos
-        ),
-        position_matrix=mol.get_position_matrix(),
-    )
-    optimizer = mch.Optimizer(
-        step_size=0.25,
-        target_bond_length=target_bond_length,
-        num_steps=1000,
-    )
-    subunits = mch_mol.get_subunits(
-        bond_pair_ids=stk_long_bond_ids,
-    )
-
-    # Just get final step.
-    mch_result = optimizer.get_result(
-        mol=mch_mol,
-        bond_pair_ids=stk_long_bond_ids,
-        # Can merge subunits to match distinct BuildingBlocks in stk
-        # ConstructedMolecule.
-        subunits=merge_subunits_by_buildingblockid(mol, subunits),
-    )
-    mol = mol.with_position_matrix(
-        mch_result.get_final_position_matrix()
-    )
-    return mol
 
 
 def main():
@@ -506,14 +545,10 @@ def main():
                 ),
                 repeating_unit='AB',
                 num_repeating_units=1,
+                optimizer=stk.MCHammer(),
             )
         )
         full_ligand.write('full_ligand_uo.mol')
-        full_ligand = opter(
-            full_ligand,
-            target_bond_length=1.2,
-            name='fl'
-        )
         full_ligand = stko.UFF(
             ignore_inter_interactions=False
         ).optimize(
@@ -554,24 +589,11 @@ def main():
                         }): 9
                     }
                 )
-            )
+            ),
+            optimizer=stk.MCHammer(),
         )
     )
-    cage.write('cage_c_uo.mol')
-    cage = opter(cage, target_bond_length=1.2, name='cg')
     cage.write('cage_c.mol')
-    print(f'Time taken w/o xtb: {time.time()-start_time}s')
-
-    cage = stko.XTBFF(
-        xtb_path='/home/atarzia/software/xtb-6.3.1/bin/xtb',
-        output_dir=f'xtbff_cage',
-        num_cores=4,
-        opt_level='normal',
-        charge=4,
-        unlimited_memory=True,
-    ).optimize(cage)
-    cage.write('cage.mol')
-
     print(f'Time taken: {time.time()-start_time}s')
     sys.exit()
 
