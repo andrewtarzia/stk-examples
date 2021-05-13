@@ -5,12 +5,260 @@ import mchammer as mch
 from os.path import exists
 import sys
 
-from atools import (
-    build_conformers,
-    AromaticCNCFactory,
-    calculate_N_COM_N_angle,
-    update_from_rdkit_conf,
-)
+
+def update_from_rdkit_conf(stk_mol, rdk_mol, conf_id):
+    """
+    Update the structure to match `conf_id` of `mol`.
+
+    Parameters
+    ----------
+    struct : :class:`stk.Molecule`
+        The molecule whoce coordinates are to be updated.
+
+    mol : :class:`rdkit.Mol`
+        The :mod:`rdkit` molecule to use for the structure update.
+
+    conf_id : :class:`int`
+        The conformer ID of the `mol` to update from.
+
+    Returns
+    -------
+    :class:`.Molecule`
+        The molecule.
+
+    """
+
+    pos_mat = rdk_mol.GetConformer(id=conf_id).GetPositions()
+    return stk_mol.with_position_matrix(pos_mat)
+
+
+def calculate_N_COM_N_angle(bb):
+    """
+    Calculate the N-COM-N angle of a ditopic building block.
+
+    This function will not work for cages built from FGs other than
+    metals + AromaticCNC and metals + AromaticCNN.
+
+    Parameters
+    ----------
+    bb : :class:`stk.BuildingBlock`
+        stk molecule to analyse.
+
+    Returns
+    -------
+    angle : :class:`float`
+        Angle between two bonding vectors of molecule.
+
+    """
+
+    fg_counts = 0
+    fg_positions = []
+    for fg in bb.get_functional_groups():
+        if isinstance(fg, AromaticCNC) or isinstance(fg, AromaticCNN):
+            fg_counts += 1
+            # Get geometrical properties of the FG.
+            # Get N position - deleter.
+            N_position, = bb.get_atomic_positions(
+                atom_ids=fg.get_nitrogen().get_id()
+            )
+            fg_positions.append(N_position)
+
+    if fg_counts != 2:
+        raise ValueError(
+            f'{bb} does not have 2 AromaticCNC or AromaticCNN '
+            'functional groups.'
+        )
+
+    # Get building block COM.
+    COM_position = get_center_of_mass(bb)
+
+    # Get vectors.
+    fg_vectors = [i-COM_position for i in fg_positions]
+
+    # Calculate the angle between the two vectors.
+    angle = np.degrees(angle_between(*fg_vectors))
+    return angle
+
+
+def build_conformers(mol, N, ETKDG_version=None):
+    """
+    Convert stk mol into RDKit mol with N conformers.
+
+    ETKDG_version allows the user to pick their choice of ETKDG params.
+
+    `None` provides the settings used in ligand_combiner and unsymm.
+
+    Other options:
+        `v3`:
+            New version from DOI: 10.1021/acs.jcim.0c00025
+            with improved handling of macrocycles.
+
+    """
+    molecule = mol.to_rdkit_mol()
+    molecule.RemoveAllConformers()
+
+    if ETKDG_version is None:
+        cids = rdkit.EmbedMultipleConfs(
+            mol=molecule,
+            numConfs=N,
+            randomSeed=1000,
+            useExpTorsionAnglePrefs=True,
+            useBasicKnowledge=True,
+            numThreads=4,
+        )
+
+    elif ETKDG_version == 'v3':
+        params = rdkit.ETKDGv3()
+        params.randomSeed = 1000
+        cids = rdkit.EmbedMultipleConfs(
+            mol=molecule,
+            numConfs=N,
+            params=params
+        )
+
+    print(f'there are {molecule.GetNumConformers()} conformers')
+    return cids, molecule
+
+
+class AromaticCNCFactory(stk.FunctionalGroupFactory):
+    """
+    A subclass of stk.SmartsFunctionalGroupFactory.
+
+    """
+
+    def __init__(self, bonders=(1, ), deleters=()):
+        """
+        Initialise :class:`.AromaticCNCFactory`.
+
+        """
+
+        self._bonders = bonders
+        self._deleters = deleters
+
+    def get_functional_groups(self, molecule):
+        generic_functional_groups = stk.SmartsFunctionalGroupFactory(
+            smarts='[#6]~[#7X2]~[#6]',
+            bonders=self._bonders,
+            deleters=self._deleters
+        ).get_functional_groups(molecule)
+        for fg in generic_functional_groups:
+            atom_ids = (i.get_id() for i in fg.get_atoms())
+            atoms = tuple(molecule.get_atoms(atom_ids))
+            yield AromaticCNC(
+                carbon1=atoms[0],
+                nitrogen=atoms[1],
+                carbon2=atoms[2],
+                bonders=tuple(atoms[i] for i in self._bonders),
+                deleters=tuple(atoms[i] for i in self._deleters),
+            )
+
+
+class AromaticCNC(stk.GenericFunctionalGroup):
+    """
+    Represents an N atom in pyridine functional group.
+
+    The structure of the functional group is given by the pseudo-SMILES
+    ``[carbon][nitrogen][carbon]``.
+
+    """
+
+    def __init__(self, carbon1, nitrogen, carbon2, bonders, deleters):
+        """
+        Initialize a :class:`.Alcohol` instance.
+
+        Parameters
+        ----------
+        carbon1 : :class:`.C`
+            The first carbon atom.
+
+        nitrogen : :class:`.N`
+            The nitrogen atom.
+
+        carbon2 : :class:`.C`
+            The second carbon atom.
+
+        bonders : :class:`tuple` of :class:`.Atom`
+            The bonder atoms.
+
+        deleters : :class:`tuple` of :class:`.Atom`
+            The deleter atoms.
+
+        """
+
+        self._carbon1 = carbon1
+        self._nitrogen = nitrogen
+        self._carbon2 = carbon2
+        atoms = (carbon1, nitrogen, carbon2)
+        super().__init__(atoms, bonders, deleters)
+
+    def get_carbon1(self):
+        """
+        Get the first carbon atom.
+
+        Returns
+        -------
+        :class:`.C`
+            The first carbon atom.
+
+        """
+
+        return self._carbon1
+
+    def get_carbon2(self):
+        """
+        Get the second carbon atom.
+
+        Returns
+        -------
+        :class:`.C`
+            The second carbon atom.
+
+        """
+
+        return self._carbon2
+
+    def get_nitrogen(self):
+        """
+        Get the nitrogen atom.
+
+        Returns
+        -------
+        :class:`.N`
+            The nitrogen atom.
+
+        """
+
+        return self._nitrogen
+
+    def clone(self):
+        clone = super().clone()
+        clone._carbon1 = self._carbon1
+        clone._nitrogen = self._nitrogen
+        clone._carbon2 = self._carbon2
+        return clone
+
+    def with_atoms(self, atom_map):
+        clone = super().with_atoms(atom_map)
+        clone._carbon1 = atom_map.get(
+            self._carbon1.get_id(),
+            self._carbon1,
+        )
+        clone._nitrogen = atom_map.get(
+            self._nitrogen.get_id(),
+            self._nitrogen,
+        )
+        clone._carbon2 = atom_map.get(
+            self._carbon2.get_id(),
+            self._carbon2,
+        )
+        return clone
+
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}('
+            f'{self._carbon1}, {self._nitrogen}, {self._carbon2}, '
+            f'bonders={self._bonders})'
+        )
 
 
 def direction(mol):
