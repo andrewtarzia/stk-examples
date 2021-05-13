@@ -1,0 +1,41 @@
+Basic usage:
+* go through latest manuscript
+* go through docs
+
+
+Functional Groups:
+* How do they work
+* How are they defined
+
+
+How to build cage:
+* What do the docs tell you?
+* Organic cages
+* Isomers
+* metal-organic cages
+
+
+Hierachical construction from paper:
+* Mimic the figure
+
+
+Hierachical construction 2:
+* run through existing example code
+
+
+Using stko:
+* Go through optimisers
+* Extracting a TG with stko
+* Mention version!
+
+
+stkvis example:
+* run through docs
+
+
+Host Guest example:
+* define some building blocks
+* make a cage
+* make an ensemble of host-guest conformers
+* calculate their energies
+* plot
