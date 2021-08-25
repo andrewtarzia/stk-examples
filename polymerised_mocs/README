@@ -1,0 +1,7 @@
+We have two scripts here:
+
+ligand_connected.py : construct an extended model of MOCs connected via ditopic building blocks connected to the ligand backbone akin to (https://doi.org/10.3389/fchem.2021.696081)
+
+metal_connected.py : construct an extended model of MOCs connected via ditopic building blocks connected to the axial position of the paddle wheel
+    This script requires a custom paddlewheel topology.
+
