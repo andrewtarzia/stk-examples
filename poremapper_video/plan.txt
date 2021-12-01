@@ -1,0 +1,14 @@
+plan:
+show structures
+show poremapper
+    what is a pore?
+    what is a blob?
+write code
+show visualisation
+
+
+
+
+Host contains Atoms
+Blob contains Beads
+At collision with Host, a Pore is generated from colliding Beads -- Pore contains Beads
