@@ -1,2 +1,4 @@
 # stk-examples
-Some example usages of stk (and stko, mchammer)
+Some example usages of [stk and other codes](https://andrewtarzia.github.io/software/) I have written or worked on.
+
+Find blog posts on code [here](https://andrewtarzia.github.io/year-archive/) and YouTube videos [here](https://www.youtube.com/playlist?list=PLIWYdPQ9hLzVngMF8NOkiApMtgc_ZwZgO)
