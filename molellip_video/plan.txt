@@ -1,0 +1,13 @@
+show rdkit example:
+    run through code
+    show data extraction
+    show plotting
+    
+show with stk molecules
+
+arbitrary coordinates
+    make an rdkit molecule
+    and do it without rdkit molecule
+
+visualisation of the ellipsoid
+
