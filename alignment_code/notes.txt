@@ -1,0 +1,16 @@
+show the orientation tests
+
+examples of spindry usage for host-guest conformations in another video -- updates to come
+
+show three examples:
+
+1. a simple small molecule
+
+2. a cage molecule 
+ - same interface
+ - effect of matched pairs
+
+3. a host-guest system
+ - align to host
+ - align to guest
+ - RMSD calculators for different molecules
