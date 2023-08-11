@@ -26,10 +26,10 @@ def unsymmetrical_ligand():
 
 class M4L82(stk.cage.Cage):
     _non_linears = (
-        stk.cage.NonLinearVertex(0, [0, 0, np.sqrt(6) / 2]),
-        stk.cage.NonLinearVertex(1, [-1, -np.sqrt(3) / 3, -np.sqrt(6) / 6]),
-        stk.cage.NonLinearVertex(2, [1, -np.sqrt(3) / 3, -np.sqrt(6) / 6]),
-        stk.cage.NonLinearVertex(3, [0, 2 * np.sqrt(3) / 3, -np.sqrt(6) / 6]),
+        stk.cage.NonLinearVertex(0, [-1, -np.sqrt(3) / 3, -np.sqrt(6) / 6]),
+        stk.cage.NonLinearVertex(1, [1, -np.sqrt(3) / 3, -np.sqrt(6) / 6]),
+        stk.cage.NonLinearVertex(2, [0, 2 * np.sqrt(3) / 3, -np.sqrt(6) / 6]),
+        stk.cage.NonLinearVertex(3, [0, 0, np.sqrt(6) / 2]),
     )
 
     paired_wall_1_coord = (
@@ -57,13 +57,14 @@ class M4L82(stk.cage.Cage):
             position=paired_wall_1_coord + wall_1_shift,
             use_neighbor_placement=False,
         ),
-        stk.cage.LinearVertex.init_at_center(
+        stk.cage.LinearVertex(
             id=5,
-            vertices=(_non_linears[0], _non_linears[2]),
+            position=paired_wall_1_coord - wall_1_shift,
+            use_neighbor_placement=False,
         ),
         stk.cage.LinearVertex.init_at_center(
             id=6,
-            vertices=(_non_linears[0], _non_linears[3]),
+            vertices=(_non_linears[0], _non_linears[2]),
         ),
         stk.cage.LinearVertex.init_at_center(
             id=7,
@@ -71,16 +72,15 @@ class M4L82(stk.cage.Cage):
         ),
         stk.cage.LinearVertex.init_at_center(
             id=8,
+            vertices=(_non_linears[0], _non_linears[3]),
+        ),
+        stk.cage.LinearVertex.init_at_center(
+            id=9,
             vertices=(_non_linears[1], _non_linears[3]),
         ),
         stk.cage.LinearVertex(
-            id=9,
-            position=paired_wall_2_coord + wall_2_shift,
-            use_neighbor_placement=False,
-        ),
-        stk.cage.LinearVertex(
             id=10,
-            position=paired_wall_1_coord - wall_1_shift,
+            position=paired_wall_2_coord + wall_2_shift,
             use_neighbor_placement=False,
         ),
         stk.cage.LinearVertex(
@@ -94,18 +94,18 @@ class M4L82(stk.cage.Cage):
         stk.Edge(0, _vertex_prototypes[0], _vertex_prototypes[4]),
         stk.Edge(1, _vertex_prototypes[0], _vertex_prototypes[5]),
         stk.Edge(2, _vertex_prototypes[0], _vertex_prototypes[6]),
-        stk.Edge(3, _vertex_prototypes[0], _vertex_prototypes[10]),
+        stk.Edge(3, _vertex_prototypes[0], _vertex_prototypes[8]),
         stk.Edge(4, _vertex_prototypes[1], _vertex_prototypes[4]),
-        stk.Edge(5, _vertex_prototypes[1], _vertex_prototypes[7]),
-        stk.Edge(6, _vertex_prototypes[1], _vertex_prototypes[8]),
-        stk.Edge(7, _vertex_prototypes[1], _vertex_prototypes[10]),
-        stk.Edge(8, _vertex_prototypes[2], _vertex_prototypes[5]),
+        stk.Edge(5, _vertex_prototypes[1], _vertex_prototypes[5]),
+        stk.Edge(6, _vertex_prototypes[1], _vertex_prototypes[7]),
+        stk.Edge(7, _vertex_prototypes[1], _vertex_prototypes[9]),
+        stk.Edge(8, _vertex_prototypes[2], _vertex_prototypes[6]),
         stk.Edge(9, _vertex_prototypes[2], _vertex_prototypes[7]),
-        stk.Edge(10, _vertex_prototypes[2], _vertex_prototypes[9]),
+        stk.Edge(10, _vertex_prototypes[2], _vertex_prototypes[10]),
         stk.Edge(11, _vertex_prototypes[2], _vertex_prototypes[11]),
-        stk.Edge(12, _vertex_prototypes[3], _vertex_prototypes[6]),
-        stk.Edge(13, _vertex_prototypes[3], _vertex_prototypes[8]),
-        stk.Edge(14, _vertex_prototypes[3], _vertex_prototypes[9]),
+        stk.Edge(12, _vertex_prototypes[3], _vertex_prototypes[8]),
+        stk.Edge(13, _vertex_prototypes[3], _vertex_prototypes[9]),
+        stk.Edge(14, _vertex_prototypes[3], _vertex_prototypes[10]),
         stk.Edge(15, _vertex_prototypes[3], _vertex_prototypes[11]),
     )
 
@@ -238,7 +238,7 @@ def topologies():
         "m4l82": {
             "fn": M4L82,
             "orientations": {
-                "1": {4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0},
+                "1": {4: 1, 5: 0, 6: 1, 7: 0, 8: 0, 9: 1, 10: 0, 11: 1},
             },
         },
     }
@@ -262,6 +262,7 @@ def main():
         c_orientations = tdict["orientations"]
         for c_a in c_orientations:
             c_orientation = c_orientations[c_a]
+            print(c_a)
             name_ = f"{topo}_{c_a}"
 
             # Build cage.
