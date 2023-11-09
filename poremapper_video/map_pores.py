@@ -17,7 +17,7 @@ for mol in mol_files:
 
     # Define calculator object.
     stime = time.time()
-    calculator = pm.Inflater(bead_sigma=0.7)
+    calculator = pm.Inflater(bead_sigma=0.7, centroid=host.get_centroid())
     final_result = calculator.get_inflated_blob(host=host)
     print(f'run time: {time.time() - stime}')
     pore = final_result.pore
