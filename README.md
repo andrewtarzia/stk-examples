@@ -1,4 +1,3 @@
-# stk-examples
 Some example usages of [stk and other codes](https://andrewtarzia.github.io/software/) I have written or worked on.
 
 Code is also available in [GitHub Gists](https://gist.github.com/andrewtarzia).
